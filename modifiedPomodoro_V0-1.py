@@ -56,6 +56,8 @@ sd_g = 20;    GPIO.setup(sd_g,    GPIO.OUT)
 sd_p = 26;    GPIO.setup(sd_p,    GPIO.OUT)
 
 #---------- ---------- ---------- ---------- VARIABLES ---------- ---------- ---------- ----------#
+rtc_hour_current = datetime.now().hour
+rtc_minute_current = datetime.now().minute
 rtc_second_current = datetime.now().second
 rtc_second_prev = rtc_second_current
 rtc_microsecond_current = datetime.now().microsecond
@@ -72,8 +74,10 @@ re_debounce_prevCall_second = rtc_second_current
 re_debounce_prevCall_microsecond = rtc_microsecond_current
 
 sd_currentDigit = 1
-sd_minute = 1
-sd_second = 0
+sd_minute_duration = 15
+sd_minute_start = rtc_minute_current
+sd_second_duration = 0
+sd_second_start = rtc_second_current
 sd_string = "0000"
 sd_refresh_rate = 200 #microseconds
 sd_refresh_prevCall_second = rtc_second_current
@@ -111,6 +115,16 @@ def sd_displayNum(sd_digit, sd_num):
         GPIO.output(sd_a, 1), GPIO.output(sd_b, 1), GPIO.output(sd_c, 1), GPIO.output(sd_d, 1), GPIO.output(sd_e, 0), GPIO.output(sd_f, 1), GPIO.output(sd_g, 1)
     elif sd_num == 0:
         GPIO.output(sd_a, 1), GPIO.output(sd_b, 1), GPIO.output(sd_c, 1), GPIO.output(sd_d, 1), GPIO.output(sd_e, 1), GPIO.output(sd_f, 1), GPIO.output(sd_g, 0)
+def timeOut(currentMicrosecond, currentSecond, lastCallMS, lastCallS, timeoutDelay):
+    if currentMicrosecond < lastCallMS and currentSecond > lastCallS:
+        return True
+    if currentMicrosecond > lastCallMS + timeoutDelay and currentSecond >= lastCallS:
+        return True
+    if currentSecond > lastCallS:
+        return True
+    if currentSecond + 1 < lastCallS:
+        return True
+
 #---------- ---------- ---------- ---------- PRELOAD ---------- ---------- ---------- ----------#
 #---------- ---------- ---------- ---------- MAIN LOOP ---------- ---------- ---------- ----------#
 try:
@@ -121,21 +135,18 @@ try:
 
         re_clk_current = GPIO.input(re_clk)
         re_dt_current = GPIO.input(re_dt)
-        if rtc_microsecond_current < re_debounce_prevCall_microsecond and rtc_second_current > rtc_second_prev \
-        or rtc_microsecond_current > re_debounce_prevCall_microsecond + re_debounce_delay \
-        or rtc_second_current > re_debounce_prevCall_second \
-        or rtc_second_current + 1 < re_debounce_prevCall_second: # 
+        if timeOut(rtc_microsecond_current, rtc_second_current, re_debounce_prevCall_microsecond, re_debounce_prevCall_second, re_debounce_delay):
             if re_clk_current == 0 and re_clk_prev == 1:
-                if re_dt_current == 1 and sd_minute < 60:
-                    sd_minute += 1
-                elif re_dt_current == 0 and sd_minute > 1:
-                    sd_minute -= 1
-                print(sd_minute)
+                if re_dt_current == 1 and sd_minute_duration < 60:
+                    sd_minute_duration += 1
+                elif re_dt_current == 0 and sd_minute_duration > 1:
+                    sd_minute_duration -= 1
+                print(sd_minute_duration)
 
-                if len(str(sd_minute)) == 1:
-                    sd_string = '0' + str(sd_minute) + '00'
+                if len(str(sd_minute_duration)) == 1:
+                    sd_string = '0' + str(sd_minute_duration) + '00'
                 else:
-                    sd_string = str(sd_minute) + '00'
+                    sd_string = str(sd_minute_duration) + '00'
 
                 re_debounce_prevCall_microsecond = rtc_microsecond_current
                 re_debounce_prevCall_second = rtc_second_current
@@ -146,13 +157,8 @@ try:
 
 
 
-        # print("A")
         sd_displayNum(sd_currentDigit, int(sd_string[sd_currentDigit - 1]))
-        # print("B")
-        if rtc_microsecond_current < sd_refresh_prevCall_microsecond and rtc_second_current > sd_refresh_prevCall_second \
-        or rtc_microsecond_current > sd_refresh_prevCall_microsecond + sd_refresh_rate and rtc_second_current >= sd_refresh_prevCall_second \
-        or rtc_second_current > sd_refresh_prevCall_second \
-        or rtc_second_current + 1 < sd_refresh_prevCall_second:
+        if timeOut(rtc_microsecond_current, rtc_second_current, sd_refresh_prevCall_microsecond, sd_refresh_prevCall_second, sd_refresh_rate):
             sd_currentDigit +=1
             if sd_currentDigit > 4: sd_currentDigit = 1
 
@@ -162,17 +168,23 @@ try:
                 sd_refresh_prevCall_microsecond = sd_refresh_prevCall_microsecond + sd_refresh_rate - pythonMaxMicroseconds
                 sd_refresh_prevCall_second += 1
 
-
-        # if microsecond_current < sd_prevCall_microsecond or 
-        # (microsecond_current > sd_prevCall_microsecond + sd_refreshRate and second_current == sd_prevCall_second) 
-        # or second_current > sd_prevCall_second or 
-        # second_current < sd_prevCall_second - 1:
-
-
-
-
-# 25.999999 --- 25.0022 current() 
 except:
     print("ERROR")
 # finally:
 #     GPIO.cleanup()
+
+
+
+
+# todo
+# timerMinute end
+# TimerSecond end
+# delay the timer for 10 seconds after rotary encoder interaction
+# after 10 seconds, the timer begins and the displays counts down
+# when the counter reaches zero the motor vibrates for 10 seconds
+# 
+# 
+# Have countdown as the default state, change it to display the selection when rotary encoder
+# if the user rotates the timer back to the orginal number DONT interrupt the timer (prevent slip?)
+# 
+# 
