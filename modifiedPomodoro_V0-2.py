@@ -1,3 +1,5 @@
+# based on version 0.1, making a new file so I can test out changing sd_minute_start to sd_minute_end
+# If this test is successful, this will become the new working file.
 #---------- ---------- ---------- ---------- MADE BY ROWAN ABRAHAM ---------- ---------- ---------- ----------#
 #---------- ---------- ---------- ---------- IMPORT STATEMENTS ---------- ---------- ---------- ----------#
 from RPi import GPIO
