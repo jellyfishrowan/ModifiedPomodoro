@@ -70,30 +70,35 @@ re_dt_current = GPIO.input(re_dt)
 re_sw_current = GPIO.input(re_sw)
 re_sw_prev = re_sw_current
 re_debounce_delay = 20000 # delay in seconds * pythonMaxMicroseconds = re_debounceDelay
+re_debounce_prevCall_minute = rtc_minute_current
 re_debounce_prevCall_second = rtc_second_current
 re_debounce_prevCall_microsecond = rtc_microsecond_current
+sd_mode_timer_changed = False
+sd_mode_timer_begin_second = 0
+sd_mode_timer_begin_minute = 0
 
 sd_currentDigit = 1
 sd_minute_duration = 15
 sd_minute_start = rtc_minute_current
 sd_second_duration = 0
 sd_second_start = rtc_second_current
-sd_string = "0000"
+sd_string = "0100"
 sd_refresh_rate = 200 #microseconds
 sd_refresh_prevCall_second = rtc_second_current
 sd_refresh_prevCall_microsecond = rtc_microsecond_current
+sd_mode_timer_delay = 10
 
 
 #---------- ---------- ---------- ---------- FUNCTIONS ---------- ---------- ---------- ----------#
 def sd_displayNum(sd_digit, sd_num):
     if sd_digit == 1:
-        GPIO.output(sd_1, 0), GPIO.output(sd_2, 1), GPIO.output(sd_3, 1), GPIO.output(sd_4, 1)
+        GPIO.output(sd_1, 0), GPIO.output(sd_2, 1), GPIO.output(sd_3, 1), GPIO.output(sd_4, 1), GPIO.output(sd_p, 0)
     elif sd_digit == 2:
-        GPIO.output(sd_1, 1), GPIO.output(sd_2, 0), GPIO.output(sd_3, 1), GPIO.output(sd_4, 1)
+        GPIO.output(sd_1, 1), GPIO.output(sd_2, 0), GPIO.output(sd_3, 1), GPIO.output(sd_4, 1), GPIO.output(sd_p, 1)
     elif sd_digit == 3:
-        GPIO.output(sd_1, 1), GPIO.output(sd_2, 1), GPIO.output(sd_3, 0), GPIO.output(sd_4, 1)
+        GPIO.output(sd_1, 1), GPIO.output(sd_2, 1), GPIO.output(sd_3, 0), GPIO.output(sd_4, 1), GPIO.output(sd_p, 0)
     elif sd_digit == 4:
-        GPIO.output(sd_1, 1), GPIO.output(sd_2, 1), GPIO.output(sd_3, 1), GPIO.output(sd_4, 0)
+        GPIO.output(sd_1, 1), GPIO.output(sd_2, 1), GPIO.output(sd_3, 1), GPIO.output(sd_4, 0), GPIO.output(sd_p, 0)
 
     if sd_num == 1:
         GPIO.output(sd_a, 0), GPIO.output(sd_b, 1), GPIO.output(sd_c, 1), GPIO.output(sd_d, 0), GPIO.output(sd_e, 0), GPIO.output(sd_f, 0), GPIO.output(sd_g, 0)
@@ -124,7 +129,27 @@ def timeOut(currentMicrosecond, currentSecond, lastCallMS, lastCallS, timeoutDel
         return True
     if currentSecond + 1 < lastCallS:
         return True
+def sd_displayString(timer_minute_duration, timer_second_duration, timer_minute_start, timer_second_start, sd_mode_timer_delay):
+    print("thing")
+    # if re_debounce_prevCall_second:
+    if sd_mode_timer_changed == True:
+        # print("waiting to set timer")
+        if rtc_second_current > re_debounce_prevCall_second + sd_mode_timer_delay \
+        or (re_debounce_prevCall_second + sd_mode_timer_delay > 60 and rtc_second_current > re_debounce_prevCall_second + sd_mode_timer_delay - 60 and (rtc_minute_current >= re_debounce_prevCall_minute + 1 or rtc_minute_current < re_debounce_prevCall_minute - 1)):
+            # if second > prevCall second + delay
+            # or if prevCall second + delay > 60 && second is past new minute time
+            # --- and is at least in the same minute, or in the following hour
+            # then set the timer
+            print("setting timer, initializing countdown")
+            sd_mode_timer_changed = False
+            sd_minute_start = rtc_minute_current
+            sd_second_start = rtc_second_current
 
+        else:
+            print("displaying duration selection, countdown not started")
+    elif sd_mode_timer_changed == False:
+        print("timer unchanged, displaying countdown")
+        # display countdown
 #---------- ---------- ---------- ---------- PRELOAD ---------- ---------- ---------- ----------#
 #---------- ---------- ---------- ---------- MAIN LOOP ---------- ---------- ---------- ----------#
 try:
@@ -147,11 +172,25 @@ try:
                     sd_string = '0' + str(sd_minute_duration) + '00'
                 else:
                     sd_string = str(sd_minute_duration) + '00'
+                
+                sd_mode_timer_changed = True
+                # if rtc_second_current + sd_mode_timer_delay > 60:
+                #     sd_mode_timer_begin_second = sd_mode_timer_begin_second + sd_mode_timer_delay - 60
+                #     if rtc_minute_current + 1 > 60:
+                #         sd_mode_timer_begin_minute = rtc_minute_current + 1 - 60
+                #     else:
+                #         sd_mode_timer_begin_minute = rtc_minute_current + 1
+                # else:
+                #     sd_mode_timer_begin_second = rtc_second_current + sd_mode_timer_delay
+                #     sd_mode_timer_begin_minute = rtc_minute_current
+
+
 
                 re_debounce_prevCall_microsecond = rtc_microsecond_current
                 re_debounce_prevCall_second = rtc_second_current
+                re_debounce_prevCall_minute = rtc_minute_current
                 if re_debounce_prevCall_microsecond + re_debounce_delay > pythonMaxMicroseconds: 
-                    re_debounce_prevCall_microsecond = re_debounce_prevCall_microsecond + re_debounce_delay - pythonMaxMicroseconds # this results in negative number i think
+                    re_debounce_prevCall_microsecond = re_debounce_prevCall_microsecond + re_debounce_delay - pythonMaxMicroseconds
                     re_debounce_prevCall_second += 1
         re_clk_prev = re_clk_current
 
@@ -170,20 +209,19 @@ try:
 
 except:
     print("ERROR")
-# finally:
-#     GPIO.cleanup()
+finally:
+    GPIO.cleanup()
 
 
 
 
 # todo
-# timerMinute end
-# TimerSecond end
-# delay the timer for 10 seconds after rotary encoder interaction
+# 
+# connect displayString() to displayNum() function, 
+# have countdown functionality
+#
 # after 10 seconds, the timer begins and the displays counts down
 # when the counter reaches zero the motor vibrates for 10 seconds
-# 
-# 
 # Have countdown as the default state, change it to display the selection when rotary encoder
 # if the user rotates the timer back to the orginal number DONT interrupt the timer (prevent slip?)
 # 
