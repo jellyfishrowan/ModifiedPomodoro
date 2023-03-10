@@ -71,7 +71,7 @@ re_debounce_timeOut = rtc_time + re_debounce_delay
 timer_duration = 1
 timer_countDown = rtc_time + timedelta(minutes = timer_duration)
 timer_hasChanged = False
-timer_setNew_delay = timedelta(seconds = 5) # seconds
+timer_setNew_delay = timedelta(seconds = 2) # seconds
 timer_setNew_timeOut = rtc_time + timer_setNew_delay
 
 sd_currentDigit = 1
