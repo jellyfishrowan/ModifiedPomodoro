@@ -61,6 +61,9 @@ sd_p = 26;    GPIO.setup(sd_p,    GPIO.OUT)
 rtc_hour_current = datetime.now().hour
 rtc_minute_current = datetime.now().minute
 rtc_second_current = datetime.now().second
+rtc_hour_timerEnd = 0
+rtc_minute_timerEnd = 0
+rtc_second_timerEnd = 0
 rtc_second_prev = rtc_second_current
 rtc_microsecond_current = datetime.now().microsecond
 rtc_microsecond_prev = rtc_microsecond_current
@@ -76,14 +79,14 @@ re_debounce_prevCall_minute = rtc_minute_current
 re_debounce_prevCall_second = rtc_second_current
 re_debounce_prevCall_microsecond = rtc_microsecond_current
 sd_mode_timer_changed = False
-sd_mode_timer_begin_second = 0
-sd_mode_timer_begin_minute = 0
+# sd_mode_timer_begin_second = 0
+# sd_mode_timer_begin_minute = 0
 
 sd_currentDigit = 1
 sd_minute_duration = 15
-sd_minute_start = rtc_minute_current
+# sd_minute_start = rtc_minute_current
 sd_second_duration = 0
-sd_second_start = rtc_second_current
+# sd_second_start = rtc_second_current
 sd_string = "0100" # this should be the current duration selection, I can figure out a way to define it early
 sd_refresh_rate = 200 #microseconds
 sd_refresh_prevCall_second = rtc_second_current
@@ -137,9 +140,23 @@ def timeOut(currentMicrosecond, currentSecond, lastCallMS, lastCallS, timeoutDel
 
 
 
-def sd_displayString(timer_minute_duration, timer_second_duration, timer_minute_start, timer_second_start, sd_mode_timer_delay):
+def startTimer():
+    print("set timer vars")
+    rtc_second_timerEnd = rtc_second_current + sd_second_duration
+    rtc_minute_timerEnd = rtc_minute_current + sd_minute_duration
+    rtc_hour_timerEnd = rtc_hour_current
+    if rtc_second_timerEnd > 60:
+        rtc_second_timerEnd -= 60
+        rtc_minute_timerEnd += 1
+    if rtc_minute_timerEnd > 60:
+        rtc_minute_timerEnd -= 60
+        rtc_hour_timerEnd += 1
+    if rtc_hour_timerEnd > 24:
+        rtc_hour_timerEnd -= 24
+
+# def sd_displayString(timer_minute_duration, timer_second_duration, timer_minute_start, timer_second_start, sd_mode_timer_delay):
+def timerMode():
     print("thing")
-    # if re_debounce_prevCall_second:
     if sd_mode_timer_changed == True:
         # print("waiting to set timer")
         if rtc_second_current > re_debounce_prevCall_second + sd_mode_timer_delay \
@@ -150,48 +167,55 @@ def sd_displayString(timer_minute_duration, timer_second_duration, timer_minute_
             # then set the timer
             print("setting timer, initializing countdown")
             sd_mode_timer_changed = False
-            sd_minute_start = rtc_minute_current
-            sd_second_start = rtc_second_current
-            formatString(sd_minute_start, sd_second_start)
+            # here is where I calculate rtc_timerEnd vars, remove sd__start vars afterwards.
+            startTimer()
+            # formatString(sd_minute_start, sd_second_start) # I actually don't need to format string, it will be the same as duration set. No change until next frame
 
         else:
             print("displaying duration selection, countdown not started")
             formatString(sd_minute_duration, sd_second_duration)
     elif sd_mode_timer_changed == False:
         print("timer unchanged, displaying countdown")
-        if sd_minute_start + sd_minute_duration > 60:
-            print("next hour")
-        if sd_second_start + sd_second_duration > 60:
-            print("next minute")
-        # display countdown
-        # hour, minute, second
-        # rtc_hour_current
-        # rtc_minute_current
-        # rtc_second_current
-        # sd_minute_start
-        # sd_second_start
-        # sd_minute_duration
-        # sd_second_duration
+# if current second is different from previous second you need to update countdown
+        # if sd_minute_start + sd_minute_duration > 60:
+        #     print("next hour")
+        # if sd_second_start + sd_second_duration > 60:
+        #     print("next minute")
+        # # display countdown
+        # # hour, minute, second
+        # # rtc_hour_current
+        # # rtc_minute_current
+        # # rtc_second_current
+        # # sd_minute_start
+        # # sd_second_start
+        # # sd_minute_duration
+        # # sd_second_duration
+
+# def testingCounting():
+#     print("a")
+#     # # i need to import math if I'm going to use this
+#     # # 22:41:57 --> 23:15:21
+#     # hours = rtc_hour_current * 3600 # 79200
+#     # minutes = rtc_minute_current * 60 # 2460
+#     # seconds = rtc_second_current # 57
+#     # currentTime = hours + minutes + seconds # 81717
+#     # timerHours = rtc_hour_timerEnd * 3600 #82800
+#     # timerMinutes = rtc_minute_timerEnd * 60 # 900
+#     # timerSeconds = rtc_second_timerEnd # 21
+#     # endTime = timerHours + timerMinutes + timerSeconds #83721
+#     # timeDifference = endTime - currentTime # 2004 (correct)
+#     # minutesRemaining = math.floor(timeDifference / 60)
+#     # secondsRemaining = timeDifference % 60
+#     # #OKAY I THINK AT THIS POINT IM JUST GOING TO USE TIME DELTA?
+# # 24:24:37 --> 01:12:46
 
 
 
 def formatString(value1, value2):
-    # here's where I would save some resources by first checking if the old value is the same as the new value, so I don't need to update it.
-    if len(str(value1)) == 1:
-        sd_string = '0' + str(value1)
-    elif len(str(value1)) == 2:
-        sd_string = '0' + str(value1)
-    else:
-        print("ERROR, 1st display num out of bounds")
-        quit()
-    
-    if len(str(value2)) == 1:
-        sd_string += '0' + str(value2)
-    elif len(str(value2)) == 2:
-        sd_string += '0' + str(value2)
-    else:
-        print("ERROR, 2nd display num out of bounds")
-        quit()
+    global sd_string
+    sd_string = f"{value1:02}{value2:02}"
+    # # FORMAT SPECIFIERS i.e. print(f"00:00:{seconds:02}"), this might be a way to clean up the ifs here
+    # # here's where I would save some resources by first checking if the old value is the same as the new value, so I don't need to update it.
     
 #---------- ---------- ---------- ---------- PRELOAD ---------- ---------- ---------- ----------#
 #---------- ---------- ---------- ---------- MAIN LOOP ---------- ---------- ---------- ----------#
@@ -211,10 +235,7 @@ try:
                     sd_minute_duration -= 1
                 print(sd_minute_duration)
 
-                if len(str(sd_minute_duration)) == 1:
-                    sd_string = '0' + str(sd_minute_duration) + '00'
-                else:
-                    sd_string = str(sd_minute_duration) + '00'
+                formatString(sd_minute_duration, sd_second_duration)
                 
                 sd_mode_timer_changed = True
                 # if rtc_second_current + sd_mode_timer_delay > 60:
