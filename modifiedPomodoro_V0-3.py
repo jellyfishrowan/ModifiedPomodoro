@@ -59,7 +59,7 @@ sd_p = 26;    GPIO.setup(sd_p,    GPIO.OUT)
 
 #---------- ---------- ---------- ---------- VARIABLES ---------- ---------- ---------- ----------#
 rtc_time = datetime.now() # this is an object (year, month, day, hour, second, microsecond)
-
+rtc_time_prev = rtc_time # this just lets me skip making the computer do a million calculations to arrive at the same result and save a tiny bit of resources
 re_clk_current = GPIO.input(re_clk)
 re_clk_prev = re_clk_current
 re_dt_current = GPIO.input(re_dt)
@@ -79,36 +79,11 @@ sd_string = f"{timer_duration:02}00" # this should be the current duration selec
 sd_refresh_delay = timedelta(microseconds = 200) #microseconds
 sd_refresh_timeOut = rtc_time + sd_refresh_delay # the time that the microseconds will have passed
 
-
-
-
-
-
-
-
-# re_debounce_delay = 20000 # delay in seconds * pythonMaxMicroseconds = re_debounceDelay
-
-# the goal is to remove all the below vars
-rtc_hour_current = datetime.now().hour
-rtc_minute_current = datetime.now().minute
-rtc_second_current = datetime.now().second
-rtc_microsecond_current = datetime.now().microsecond
-pythonMaxMicroseconds = 999999 # 980000 is what console is telling me, 999999 is what test gives me
-# rtc_hour_timerEnd = 0
-# rtc_minute_timerEnd = 0
-# rtc_second_timerEnd = 0
-# rtc_second_prev = rtc_second_current
-rtc_time_prev = rtc_time
-# rtc_microsecond_prev = rtc_microsecond_current
-
-re_debounce_prevCall_minute = rtc_minute_current
-re_debounce_prevCall_second = rtc_second_current
-re_debounce_prevCall_microsecond = rtc_microsecond_current
-
-sd_minute_duration = 15
-sd_second_duration = 0
-sd_refresh_prevCall_second = rtc_second_current
-sd_refresh_prevCall_microsecond = rtc_microsecond_current
+vm_pwm = GPIO.PWM(vm_vcc, 1000)
+vm_duration = timedelta(milliseconds = 1000)
+vm_timeOut = rtc_time + vm_duration
+vm_intensity = 100 #this is 0% to 100% of the 1000 Hz
+vm_isOn = False
 
 #---------- ---------- ---------- ---------- FUNCTIONS ---------- ---------- ---------- ----------#
 def sd_displayNum(sd_digit, sd_num):
@@ -143,6 +118,7 @@ def sd_displayNum(sd_digit, sd_num):
         GPIO.output(sd_a, 1), GPIO.output(sd_b, 1), GPIO.output(sd_c, 1), GPIO.output(sd_d, 1), GPIO.output(sd_e, 1), GPIO.output(sd_f, 1), GPIO.output(sd_g, 0)
 
 #---------- ---------- ---------- ---------- PRELOAD ---------- ---------- ---------- ----------#
+
 #---------- ---------- ---------- ---------- MAIN LOOP ---------- ---------- ---------- ----------#
 try:
     while True:
@@ -157,35 +133,33 @@ try:
                     timer_duration += 1
                 elif re_dt_current == 0 and timer_duration > 1:
                     timer_duration -= 1
-                # print(timer_duration)
-                # sd_string = f"{timer_duration:02}00"
                 re_debounce_timeOut = rtc_time + re_debounce_delay
                 timer_hasChanged = True
                 timer_setNew_timeOut = rtc_time + timer_setNew_delay
+                vm_pwm.stop()
         re_clk_prev = re_clk_current
 
-
-
-        # sd_displayNum(sd_currentDigit, int(sd_string[sd_currentDigit - 1]))
         if timer_hasChanged == True:
             if rtc_time > timer_setNew_timeOut:
-                print("set the timer here, then display")
                 timer_countDown = rtc_time + timedelta(minutes = timer_duration)
                 timer_hasChanged = False
             sd_string = f"{timer_duration:02}00"
-            # print("duration(", timer_duration, ")")
         elif rtc_time > timer_countDown:
-            print("RESET")
             timer_countDown = rtc_time + timedelta(minutes = timer_duration)
             sd_string = f"{timer_duration:02}00"
+            vm_isOn = True
+            vm_pwm.start(vm_intensity)
+            vm_timeOut = rtc_time + vm_duration
         else: 
+            if rtc_time > vm_timeOut and vm_isOn:
+                vm_pwm.stop()
+                vm_isOn = False
             if rtc_time.second != rtc_time_prev.second:
                 timeRemaining = timer_countDown - rtc_time
                 minutesRemaining = int(timeRemaining / timedelta(minutes=1))
                 secondsRemaining = timeRemaining.seconds % 60
                 sd_string = f"{minutesRemaining:02}{secondsRemaining:02}"
                 # print((timer_countDown - rtc_time).seconds) # a nice way to reframe time is by using seconds instead, totally possible.
-                print(sd_string)
 
         if rtc_time > sd_refresh_timeOut:
             sd_displayNum(sd_currentDigit, int(sd_string[sd_currentDigit - 1]))
