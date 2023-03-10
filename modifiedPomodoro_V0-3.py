@@ -182,7 +182,8 @@ try:
             if rtc_time.second != rtc_time_prev.second:
                 timeRemaining = timer_countDown - rtc_time
                 minutesRemaining = int(timeRemaining / timedelta(minutes=1))
-                sd_string = f"{minutesRemaining:02}{timeRemaining.seconds:02}"
+                secondsRemaining = timeRemaining.seconds % 60
+                sd_string = f"{minutesRemaining:02}{secondsRemaining:02}"
                 # print((timer_countDown - rtc_time).seconds) # a nice way to reframe time is by using seconds instead, totally possible.
                 print(sd_string)
 
