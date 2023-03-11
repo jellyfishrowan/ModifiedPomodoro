@@ -59,7 +59,7 @@ sd_p = 26;    GPIO.setup(sd_p,    GPIO.OUT)
 
 #---------- ---------- ---------- ---------- VARIABLES ---------- ---------- ---------- ----------#
 rtc_time = datetime.now() # this is an object (year, month, day, hour, second, microsecond)
-rtc_time_prev = rtc_time # this just lets me skip making the computer do a million calculations to arrive at the same result and save a tiny bit of resources
+rtc_time_prev = rtc_time # this just lets me skip making the computer do redundent work
 re_clk_current = GPIO.input(re_clk)
 re_clk_prev = re_clk_current
 re_dt_current = GPIO.input(re_dt)
@@ -71,18 +71,18 @@ re_debounce_timeOut = rtc_time + re_debounce_delay
 timer_duration = 1
 timer_countDown = rtc_time + timedelta(minutes = timer_duration)
 timer_hasChanged = False
-timer_setNew_delay = timedelta(seconds = 2) # seconds
+timer_setNew_delay = timedelta(seconds = 2)
 timer_setNew_timeOut = rtc_time + timer_setNew_delay
 
 sd_currentDigit = 1
-sd_string = f"{timer_duration:02}00" # this should be the current duration selection, I can figure out a way to define it early
-sd_refresh_delay = timedelta(microseconds = 200) #microseconds
-sd_refresh_timeOut = rtc_time + sd_refresh_delay # the time that the microseconds will have passed
+sd_string = f"{timer_duration:02}00"
+sd_refresh_delay = timedelta(microseconds = 200) 
+sd_refresh_timeOut = rtc_time + sd_refresh_delay
 
 vm_pwm = GPIO.PWM(vm_vcc, 1000)
 vm_duration = timedelta(milliseconds = 1000)
 vm_timeOut = rtc_time + vm_duration
-vm_intensity = 100 #this is 0% to 100% of the 1000 Hz
+vm_intensity = 100 #this is 0% to 100% of the (vm_pwm)Hz
 vm_isOn = False
 
 #---------- ---------- ---------- ---------- FUNCTIONS ---------- ---------- ---------- ----------#
@@ -123,7 +123,6 @@ def sd_displayNum(sd_digit, sd_num):
 try:
     while True:
         rtc_time = datetime.now()
-
         re_clk_current = GPIO.input(re_clk)
         re_dt_current = GPIO.input(re_dt)
 
@@ -168,9 +167,8 @@ try:
             else: 
                 sd_currentDigit = 1
             sd_refresh_timeOut = rtc_time + sd_refresh_delay
-        
-        rtc_time_prev = rtc_time
 
+        rtc_time_prev = rtc_time
 except:
     print("ERROR")
 finally:
